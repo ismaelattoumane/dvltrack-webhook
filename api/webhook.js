@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
 
-  const BREVO_KEY = process.env.BREVO_API_KEY || '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';
+  const BREVO_KEY = process.env.BREVO_API_KEY || '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';
 
   if (req.method !== 'POST') {
     return res.status(200).json({ status: 'webhook_ready' });
