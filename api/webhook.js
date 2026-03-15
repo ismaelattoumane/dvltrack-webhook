@@ -2,16 +2,19 @@ export default async function handler(req, res) {
 
   const BREVO_KEY = process.env.BREVO_API_KEY || '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';
 
+  // ← METS TON EMAIL GMAIL ICI
+  const SENDER_EMAIL = 'dvltrack.app@gmail.com';
+  const SENDER_NAME  = 'DVLTrack Premium';
+
   if (req.method !== 'POST') {
     return res.status(200).json({ status: 'webhook_ready' });
   }
 
-  const { email, full_name, sale_id, refunded, test } = req.body || {};
+  const { email, full_name, sale_id, refunded } = req.body || {};
 
   if (!email) return res.status(200).json({ status: 'test_ping_ok' });
   if (refunded === 'true') return res.status(200).json({ status: 'refund_ignored' });
 
-  // Générer code
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'DVL-';
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
@@ -50,6 +53,15 @@ export default async function handler(req, res) {
 </body></html>`;
 
   try {
+    // D'abord récupère les infos du compte Brevo pour debug
+    const accountRes = await fetch('https://api.brevo.com/v3/account', {
+      headers: { 'api-key': BREVO_KEY }
+    });
+    const account = await accountRes.json();
+
+    // Envoie l'email avec l'email du compte Brevo comme expéditeur
+    const senderEmail = account?.email || SENDER_EMAIL;
+
     const emailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -57,15 +69,23 @@ export default async function handler(req, res) {
         'api-key': BREVO_KEY,
       },
       body: JSON.stringify({
-        sender: { name: 'DVLTrack Premium', email: 'noreply@dvltracker.xo.je' },
+        sender: { name: SENDER_NAME, email: senderEmail },
         to: [{ email, name }],
         subject: `🎉 Ton accès DVLTrack Premium — Code : ${code}`,
         htmlContent: html,
       }),
     });
 
+    const emailBody = await emailRes.json();
     const sent = emailRes.ok;
-    return res.status(200).json({ status: 'ok', code, email_sent: sent });
+
+    return res.status(200).json({
+      status: sent ? 'ok' : 'email_error',
+      code,
+      email_sent: sent,
+      brevo_account: senderEmail,
+      brevo_response: emailBody,
+    });
 
   } catch (err) {
     return res.status(200).json({ status: 'error', message: err.message });
