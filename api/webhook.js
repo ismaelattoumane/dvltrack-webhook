@@ -2,10 +2,6 @@ export default async function handler(req, res) {
 
   const BREVO_KEY = process.env.BREVO_API_KEY || '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';
 
-  // ← METS TON EMAIL GMAIL ICI
-  const SENDER_EMAIL = 'dvltrack.app@gmail.com';
-  const SENDER_NAME  = 'DVLTrack Premium';
-
   if (req.method !== 'POST') {
     return res.status(200).json({ status: 'webhook_ready' });
   }
@@ -47,21 +43,12 @@ export default async function handler(req, res) {
     </div>
   </div>
   <div style="background:#0d0d0d;padding:1rem 2rem;text-align:center;border-top:1px solid #1a1a1a">
-    <div style="font-size:.72rem;color:#444">Questions ? <a href="mailto:contact@dvltrack.app" style="color:#666">contact@dvltrack.app</a></div>
+    <div style="font-size:.72rem;color:#444">Questions ? <a href="mailto:dvltracker@gmail.com" style="color:#666">dvltracker@gmail.com</a></div>
   </div>
 </div>
 </body></html>`;
 
   try {
-    // D'abord récupère les infos du compte Brevo pour debug
-    const accountRes = await fetch('https://api.brevo.com/v3/account', {
-      headers: { 'api-key': BREVO_KEY }
-    });
-    const account = await accountRes.json();
-
-    // Envoie l'email avec l'email du compte Brevo comme expéditeur
-    const senderEmail = account?.email || SENDER_EMAIL;
-
     const emailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -69,7 +56,7 @@ export default async function handler(req, res) {
         'api-key': BREVO_KEY,
       },
       body: JSON.stringify({
-        sender: { name: SENDER_NAME, email: senderEmail },
+        sender: { name: 'DVLTrack Premium', email: 'dvltracker@gmail.com' },
         to: [{ email, name }],
         subject: `🎉 Ton accès DVLTrack Premium — Code : ${code}`,
         htmlContent: html,
@@ -83,7 +70,6 @@ export default async function handler(req, res) {
       status: sent ? 'ok' : 'email_error',
       code,
       email_sent: sent,
-      brevo_account: senderEmail,
       brevo_response: emailBody,
     });
 
