@@ -15,6 +15,7 @@ export default async function handler(req, res) {
   if (!email) return res.status(200).json({ status: 'test_ping_ok' });
   if (refunded === 'true') return res.status(200).json({ status: 'refund_ignored' });
 
+  // Générer code
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'DVL-';
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
@@ -23,6 +24,23 @@ export default async function handler(req, res) {
 
   const name = full_name || email;
 
+  // 1. Sauvegarder le code sur InfinityFree via save_code.php
+  try {
+    await fetch('https://dvltracker.xo.je/save_code.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        buyer: name,
+        email,
+        order_id: sale_id || 'order_' + Date.now(),
+      }),
+    });
+  } catch(e) {
+    // Continue même si la sauvegarde échoue
+  }
+
+  // 2. Envoyer l'email
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:-apple-system,sans-serif;background:#f0f0f0;padding:2rem;margin:0">
 <div style="max-width:500px;margin:0 auto;background:#080808;border-radius:16px;overflow:hidden">
