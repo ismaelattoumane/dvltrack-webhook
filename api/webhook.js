@@ -1,10 +1,8 @@
 export default async function handler(req, res) {
 
-  const BREVO_KEY = process.env.BREVO_API_KEY;
-
-  if (!BREVO_KEY) {
-    return res.status(500).json({ status: 'error', message: 'BREVO_API_KEY not configured' });
-  }
+  const BREVO_KEY    = process.env.BREVO_API_KEY;
+  const SUPA_URL     = 'https://jkcksdlrsfoodtdjqhdi.supabase.co';
+  const SUPA_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprY2tzZGxyc2Zvb2R0ZGpxaGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODc4MzgsImV4cCI6MjA4OTE2MzgzOH0.Wh32gLdoeoB3RAFiOKxZa_e-cdXtOo9ufWzxOOlfKN0';
 
   if (req.method !== 'POST') {
     return res.status(200).json({ status: 'webhook_ready' });
@@ -15,7 +13,7 @@ export default async function handler(req, res) {
   if (!email) return res.status(200).json({ status: 'test_ping_ok' });
   if (refunded === 'true') return res.status(200).json({ status: 'refund_ignored' });
 
-  // Générer code
+  // Générer code unique
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'DVL-';
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
@@ -24,11 +22,16 @@ export default async function handler(req, res) {
 
   const name = full_name || email;
 
-  // 1. Sauvegarder le code sur InfinityFree via save_code.php
+  // Sauvegarder dans Supabase
   try {
-    await fetch('https://dvltracker.xo.je/save_code.php', {
+    await fetch(`${SUPA_URL}/rest/v1/codes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Prefer': 'return=minimal',
+      },
       body: JSON.stringify({
         code,
         buyer: name,
@@ -36,11 +39,9 @@ export default async function handler(req, res) {
         order_id: sale_id || 'order_' + Date.now(),
       }),
     });
-  } catch(e) {
-    // Continue même si la sauvegarde échoue
-  }
+  } catch(e) {}
 
-  // 2. Envoyer l'email
+  // Email HTML
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:-apple-system,sans-serif;background:#f0f0f0;padding:2rem;margin:0">
 <div style="max-width:500px;margin:0 auto;background:#080808;border-radius:16px;overflow:hidden">
@@ -84,17 +85,8 @@ export default async function handler(req, res) {
         htmlContent: html,
       }),
     });
-
-    const emailBody = await emailRes.json();
     const sent = emailRes.ok;
-
-    return res.status(200).json({
-      status: sent ? 'ok' : 'email_error',
-      code,
-      email_sent: sent,
-      brevo_response: emailBody,
-    });
-
+    return res.status(200).json({ status: sent ? 'ok' : 'email_error', code, email_sent: sent });
   } catch (err) {
     return res.status(200).json({ status: 'error', message: err.message });
   }
